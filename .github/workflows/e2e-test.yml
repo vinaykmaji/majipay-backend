@@ -49,13 +49,11 @@ jobs:
           cd stockmanager
           mvn clean install
 
-          docker build --no-cache -t $ECR_REGISTRY/$ECR_REPO_SM:$IMAGE_TAG . -f .
-
       - name: Maven Build Shopfront
         run: |          
           cd shopfront
           mvn clean install
-          docker build --no-cache -t $ECR_REGISTRY/$ECR_REPO_SF:$IMAGE_TAG . -f .
+          # docker build --no-cache -t $ECR_REGISTRY/$ECR_REPO_SF:$IMAGE_TAG . -f .
           
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -70,18 +68,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build, tag, and push image to Amazon ECR
+      - name: Build, tag, and push image to Amazon ECR - StockManager
         id: image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           # IMAGE_TAG: ${{ github.sha }}
           IMAGE_TAG: latest
-          ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
-        run: |
-          # docker build --no-cache -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG . -f ./docker/Dockerfile
-          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+          ECR_REPO_SM: ${{ env.ECR_REPO_SM }}
+        run: |          
+          docker build --no-cache -t $ECR_REGISTRY/$ECR_REPO_SM:$IMAGE_TAG . -f .
+          docker tag $ECR_REGISTRY/$ECR_REPO_SM:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPO_SM:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPO_SM:$IMAGE_TAG
+          echo "image=$ECR_REGISTRY/$ECR_REPO_SM:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
   # kubernetes:
   #   name: Kubernetes E2E Tests
