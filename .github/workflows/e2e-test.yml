@@ -35,7 +35,8 @@ jobs:
         uses: ./.github/actions/setup-env
       - name: Maven Build
         run: |
-          cd App
+          cd stockmanager
+          mvn clean install
           cd shopfront
           mvn clean install
 
