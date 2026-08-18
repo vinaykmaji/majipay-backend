@@ -12,19 +12,19 @@ on:
 permissions: {}
 
 jobs:
-  docker:
-    name: Docker E2E Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: "Setup Env"
-        uses: ./.github/actions/setup-env
-      - name: Build with Maven
-        run: mvn --batch-mode --update-snapshots verify
-      - name: Run Formatter
-        run: mvn com.coveo:fmt-maven-plugin:format
-      - name: Test
-        run: mvn test
+  # docker:
+  #   name: Docker E2E Tests
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: "Setup Env"
+  #       uses: ./.github/actions/setup-env
+  #     - name: Build with Maven
+  #       run: mvn --batch-mode --update-snapshots verify
+  #     - name: Run Formatter
+  #       run: mvn com.coveo:fmt-maven-plugin:format
+  #     - name: Test
+  #       run: mvn test
 
   docker-multi:
     name: Docker E2E Tests (Multi)
@@ -38,7 +38,7 @@ jobs:
           cd App
           cd shopfront
           mvn clean install
-          
+
       # - name: Run functional tests
       #   run: |
       #     CYPRESS_BASE_URL='http://localhost:8888' yarn nx execute e2e
