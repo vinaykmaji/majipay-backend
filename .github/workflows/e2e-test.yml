@@ -11,6 +11,13 @@ on:
 
 permissions: {}
 
+env:
+  ENV: dev
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  AWS_REGION: eu-north-1
+  ECR_REPO_SF: "maji-dev-shopfront"
+  ECR_REPO_SM: "maji-dev-stockmanager"
+
 jobs:
   # docker:
   #   name: Docker E2E Tests
@@ -29,6 +36,10 @@ jobs:
   docker-multi:
     name: Docker E2E Tests (Multi)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
     steps:
       - uses: actions/checkout@v4
       - name: "Setup Env"
@@ -37,53 +48,40 @@ jobs:
         run: |
           cd stockmanager
           mvn clean install
+
+          docker build --no-cache -t $ECR_REGISTRY/$ECR_REPO_SM:$IMAGE_TAG . -f .
+
       - name: Maven Build Shopfront
         run: |          
           cd shopfront
           mvn clean install
+          docker build --no-cache -t $ECR_REGISTRY/$ECR_REPO_SF:$IMAGE_TAG . -f .
+          
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/maji-${{ env.ENV }}-github-actions-role
+          aws-region: ${{ env.AWS_REGION }}
 
-      # - name: Run functional tests
-      #   run: |
-      #     CYPRESS_BASE_URL='http://localhost:8888' yarn nx execute e2e
-      # - name: Run trace assertions
-      #   run: |
-      #     # Wait for traces to be received
-      #     sleep 90
-      #     bash src/e2e/scripts/assert-traces.sh
-      # - name: Run load test
-      #   run: |
-      #     cd src/load-generator
-      #     bash scripts/run-test.sh
-      # - name: Compose down
-      #   if: always()
-      #   run: |
-      #     DB_PASSWORD='test123' docker compose \
-      #       -f src/app/docker-compose.yml \
-      #       -f src/app/compose.override.yaml \
-      #       -f src/app/docker-compose.tracing.yml \
-      #       down
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-  # docker-multi-search:
-  #   name: Docker E2E Tests (Multi/Search)
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - name: "Setup Env"
-  #       uses: ./.github/actions/setup-env
-      # - name: Compose up
-      #   run: |
-      #     DB_PASSWORD='test123' SEARCH_ENABLED=true yarn nx compose:up
-      #     sleep 60
-      # - name: Test
-      #   run: |
-      #     CYPRESS_BASE_URL='http://localhost:8888' CYPRESS_SEARCH_ENABLED=true yarn nx execute e2e
-      # - name: Load Generator
-      #   run: |
-      #     cd src/load-generator
-      #     bash scripts/run-test.sh
-      # - name: Compose down
-      #   run: |
-      #     DB_PASSWORD='test123' SEARCH_ENABLED=true yarn nx compose:down
+      - name: Build, tag, and push image to Amazon ECR
+        id: image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          # IMAGE_TAG: ${{ github.sha }}
+          IMAGE_TAG: latest
+          ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
+        run: |
+          # docker build --no-cache -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG . -f ./docker/Dockerfile
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
   # kubernetes:
   #   name: Kubernetes E2E Tests
