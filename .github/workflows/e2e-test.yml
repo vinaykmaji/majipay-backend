@@ -76,7 +76,7 @@ jobs:
           IMAGE_TAG: latest
           ECR_REPO_SM: ${{ env.ECR_REPO_SM }}
         run: |          
-          docker build --no-cache -t $ECR_REGISTRY/$ECR_REPO_SM:$IMAGE_TAG . -f .
+          docker build --no-cache -t $ECR_REGISTRY/$ECR_REPO_SM:$IMAGE_TAG . -f ./stockmanager/Dockerfile
           docker tag $ECR_REGISTRY/$ECR_REPO_SM:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPO_SM:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPO_SM:$IMAGE_TAG
           echo "image=$ECR_REGISTRY/$ECR_REPO_SM:$IMAGE_TAG" >> $GITHUB_OUTPUT
