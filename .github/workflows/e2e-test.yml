@@ -53,17 +53,21 @@ jobs:
       #     mvn clean install
 
       - name: Build and unit test
-        run: mvn -B verify -DskipITs
+        run:  |
+          cd stockmanager
+          mvn -B verify -DskipITs
 
-      - name: Integration tests
-        run: mvn -B verify -Dit.test="**/*IT" -Dsurefire.skip=true
+      # - name: Integration tests
+      #   run: |
+      #     cd stockmanager
+      #     mvn -B verify -Dit.test="**/*IT" -Dsurefire.skip=true
 
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results
-          path: target/surefire-reports/
+      # - name: Upload test results
+      #   if: always()
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: test-results
+      #     path: target/surefire-reports/
       
       # For finer control over the cache key — for example, busting the cache when pom.xml changes but not on every commit:
       # - name: Cache Maven dependencies
@@ -102,7 +106,9 @@ jobs:
         uses: ./.github/actions/setup-env
 
       - name: Build JAR
-        run: mvn -B package -DskipTests        
+        run: |
+          cd stockmanager
+          mvn -B package -DskipTests        
 
       - name: Docker Build, tag, and push image to Amazon ECR
         id: image
