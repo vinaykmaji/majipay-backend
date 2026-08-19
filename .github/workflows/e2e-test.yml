@@ -33,42 +33,78 @@ jobs:
   #     - name: Test
   #       run: mvn test
 
-  docker-multi:
+  build-and-test:
     name: Docker E2E Tests (Multi)
     runs-on: ubuntu-latest
     permissions:
       contents: read
       id-token: write
-
+      
     steps:
-      - uses: actions/checkout@v4
+      - name: StockManager
+        uses: actions/checkout@v4
+
       - name: "Setup Env"
         uses: ./.github/actions/setup-env
-      - name: Maven Build StockManager
-        run: |
-          cd stockmanager
-          mvn clean install
 
-      - name: Maven Build Shopfront
-        run: |          
-          cd shopfront
-          mvn clean install
-          # docker build --no-cache -t $ECR_REGISTRY/$ECR_REPO_SF:$IMAGE_TAG . -f .
-          
+      # - name: Maven Build
+      #   run: |
+      #     cd stockmanager
+      #     mvn clean install
+
+      - name: Build and unit test
+        run: mvn -B verify -DskipITs
+
+      - name: Integration tests
+        run: mvn -B verify -Dit.test="**/*IT" -Dsurefire.skip=true
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: target/surefire-reports/
+      
+      # For finer control over the cache key — for example, busting the cache when pom.xml changes but not on every commit:
+      # - name: Cache Maven dependencies
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: ~/.m2/repository
+      #     key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+      #     restore-keys: |
+      #       ${{ runner.os }}-maven-
+
+  publish-image:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    permissions:
+      contents: read
+      packages: write   # required for GitHub Container Registry
+    
+    steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/maji-${{ env.ENV }}-github-actions-role
           aws-region: ${{ env.AWS_REGION }}
+          role-session-name: GithubActionsSession
 
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
-      
-      - name: Checkout code
+
+      - name: StockManager
         uses: actions/checkout@v4
 
-      - name: Build, tag, and push image to Amazon ECR - StockManager
+      - name: "Setup Env"
+        uses: ./.github/actions/setup-env
+
+      - name: Build JAR
+        run: mvn -B package -DskipTests        
+
+      - name: Docker Build, tag, and push image to Amazon ECR
         id: image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
